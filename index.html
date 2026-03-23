@@ -574,8 +574,9 @@ tg.enableClosingConfirmation();
 tg.setHeaderColor(getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#0f0f0f');
 
 // API config — change this to your bot's API URL
-const DEFAULT_API = 'https://polite-ravens-laugh.loca.lt';
-const API_BASE = localStorage.getItem('api_base') || DEFAULT_API;
+// API discovery: bot writes tunnel URL to this endpoint
+const TUNNEL_URL_FILE = 'https://raw.githubusercontent.com/TateLyman/sol-scanner-miniapp/main/api-url.txt';
+let API_BASE = localStorage.getItem('api_base') || '';
 const initData = tg.initData;
 const user = tg.initDataUnsafe?.user;
 
@@ -1053,46 +1054,82 @@ function formatPrice(p) {
 // BOOT
 // ==========================================
 
-// API URL can be set via:
-// 1. startapp param in deep link (base64 encoded URL)
+// Auto-discover API URL:
+// 1. startapp param (base64 encoded)
 // 2. localStorage from previous session
-// 3. Manual setup screen
-const startParam = tg.initDataUnsafe?.start_param;
-if (startParam && !localStorage.getItem('api_base')) {
-  try {
-    const decoded = atob(startParam);
-    if (decoded.startsWith('http')) {
-      localStorage.setItem('api_base', decoded.replace(/\/$/, ''));
-      location.reload();
-    }
-  } catch {}
-}
+// 3. Fetch from GitHub (bot pushes URL there on tunnel start)
+// 4. Manual setup screen
+async function boot() {
+  const startParam = tg.initDataUnsafe?.start_param;
+  if (startParam) {
+    try {
+      const decoded = atob(startParam);
+      if (decoded.startsWith('http')) {
+        API_BASE = decoded.replace(/\/$/, '');
+        localStorage.setItem('api_base', API_BASE);
+      }
+    } catch {}
+  }
 
-if (!API_BASE || API_BASE === '') {
-  // Show setup screen (only if no default and no stored URL)
-  document.getElementById('screen-dashboard').innerHTML = `
-    <div class="card" style="margin-top:40px;text-align:center">
-      <div style="font-size:48px;margin-bottom:16px">&#x26A1;</div>
-      <div style="font-size:20px;font-weight:700;margin-bottom:8px">Connect to Bot API</div>
-      <div style="color:var(--hint);font-size:13px;margin-bottom:20px;line-height:1.6">
-        Enter the URL where your bot's API server is running.<br>
-        This is the server running on port 3847.
+  // If no stored URL, try fetching from GitHub
+  if (!API_BASE) {
+    try {
+      const res = await fetch(TUNNEL_URL_FILE + '?t=' + Date.now());
+      const text = await res.text();
+      const url = text.trim();
+      if (url.startsWith('http')) {
+        API_BASE = url;
+        localStorage.setItem('api_base', API_BASE);
+      }
+    } catch {}
+  }
+
+  if (!API_BASE) {
+    document.getElementById('screen-dashboard').innerHTML = `
+      <div class="card" style="margin-top:40px;text-align:center">
+        <div style="font-size:48px;margin-bottom:16px">&#x26A1;</div>
+        <div style="font-size:20px;font-weight:700;margin-bottom:8px">Connect to Bot API</div>
+        <div style="color:var(--hint);font-size:13px;margin-bottom:20px;line-height:1.6">
+          Enter the URL where your bot's API server is running.
+        </div>
+        <div class="amount-input-group" style="margin-bottom:12px">
+          <input type="url" id="setupUrl" placeholder="https://your-server:3847" style="flex:1;background:none;color:var(--text);font-size:14px">
+        </div>
+        <button class="trade-btn buy" onclick="
+          const url = document.getElementById('setupUrl').value.trim();
+          if (url && url.startsWith('http')) {
+            localStorage.setItem('api_base', url.replace(/\\/$/, ''));
+            location.reload();
+          }
+        ">Connect</button>
       </div>
-      <div class="amount-input-group" style="margin-bottom:12px">
-        <input type="url" id="setupUrl" placeholder="https://your-server:3847" style="flex:1;background:none;color:var(--text);font-size:14px">
-      </div>
-      <button class="trade-btn buy" onclick="
-        const url = document.getElementById('setupUrl').value.trim();
-        if (url && url.startsWith('http')) {
-          localStorage.setItem('api_base', url.replace(/\\/$/, ''));
-          location.reload();
-        }
-      ">Connect</button>
-    </div>
-  `;
-} else {
+    `;
+    return;
+  }
+
+  // Verify the API is reachable, if not clear and retry
+  try {
+    const test = await fetch(API_BASE + '/api/health', {
+      headers: { 'Bypass-Tunnel-Reminder': 'true' },
+    });
+    if (!test.ok) throw new Error();
+  } catch {
+    // Stored URL is stale, try refreshing from GitHub
+    localStorage.removeItem('api_base');
+    try {
+      const res = await fetch(TUNNEL_URL_FILE + '?t=' + Date.now());
+      const url = (await res.text()).trim();
+      if (url.startsWith('http')) {
+        API_BASE = url;
+        localStorage.setItem('api_base', API_BASE);
+      }
+    } catch {}
+  }
+
   loadDashboard();
 }
+
+boot();
 </script>
 </body>
 </html>
