@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Sol Scanner</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 <style>
 /* ==========================================
    BASE + TELEGRAM THEME
@@ -460,6 +461,11 @@ input { font-family: inherit; outline: none; border: none; }
      DISCOVER SCREEN
      ========================================== -->
 <div class="screen" id="screen-discover">
+  <div class="card" id="adCard" style="text-align:center;background:linear-gradient(135deg,#1a1a3e,#2d1b69);border:1px solid rgba(108,92,231,0.3)">
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px">Free Alpha Signal</div>
+    <div style="font-size:12px;color:var(--hint);margin-bottom:10px">Watch a short ad to unlock today's top pick</div>
+    <button class="premium-btn" style="margin-top:0;padding:10px" onclick="showRewardedAd()">Watch Ad</button>
+  </div>
   <div class="discover-section">
     <div class="section-title">Trending Tokens</div>
     <div id="trendingList">
@@ -1035,6 +1041,37 @@ function copyRefLink() {
 // ==========================================
 function shortAddr(a) {
   return a && a.length > 12 ? a.slice(0, 6) + '...' + a.slice(-4) : a;
+}
+
+// ==========================================
+// ADS (Adsgram rewarded video)
+// ==========================================
+let adController = null;
+try {
+  if (window.Adsgram) {
+    // NOTE: Replace with your actual block ID from Adsgram dashboard
+    adController = window.Adsgram.init({ blockId: 'sol-scanner-reward-1' });
+  }
+} catch {}
+
+async function showRewardedAd() {
+  if (!adController) {
+    // Fallback if Adsgram not loaded — just show trending
+    toast('Loading alpha...', 'success');
+    loadTrending();
+    return;
+  }
+  try {
+    await adController.show();
+    // User watched ad — reward with alpha/trending data
+    toast('Alpha unlocked!', 'success');
+    loadTrending();
+    // Hide the ad card for this session
+    document.getElementById('adCard').style.display = 'none';
+  } catch {
+    // User skipped or error — still show trending
+    loadTrending();
+  }
 }
 
 function formatNum(n) {
