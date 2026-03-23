@@ -574,7 +574,8 @@ tg.enableClosingConfirmation();
 tg.setHeaderColor(getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#0f0f0f');
 
 // API config — change this to your bot's API URL
-const API_BASE = localStorage.getItem('api_base') || '';
+const DEFAULT_API = 'https://polite-ravens-laugh.loca.lt';
+const API_BASE = localStorage.getItem('api_base') || DEFAULT_API;
 const initData = tg.initData;
 const user = tg.initDataUnsafe?.user;
 
@@ -1066,8 +1067,8 @@ if (startParam && !localStorage.getItem('api_base')) {
   } catch {}
 }
 
-if (!API_BASE) {
-  // Show setup screen
+if (!API_BASE || API_BASE === '') {
+  // Show setup screen (only if no default and no stored URL)
   document.getElementById('screen-dashboard').innerHTML = `
     <div class="card" style="margin-top:40px;text-align:center">
       <div style="font-size:48px;margin-bottom:16px">&#x26A1;</div>
