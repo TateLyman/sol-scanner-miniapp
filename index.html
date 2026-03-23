@@ -1050,16 +1050,47 @@ function formatPrice(p) {
 // ==========================================
 // BOOT
 // ==========================================
-if (!API_BASE) {
-  // Show config prompt if no API base set
-  const base = prompt('Enter your bot API URL (e.g. https://your-server:3847)');
-  if (base) {
-    localStorage.setItem('api_base', base.replace(/\/$/, ''));
-    location.reload();
-  }
+
+// API URL can be set via:
+// 1. startapp param in deep link (base64 encoded URL)
+// 2. localStorage from previous session
+// 3. Manual setup screen
+const startParam = tg.initDataUnsafe?.start_param;
+if (startParam && !localStorage.getItem('api_base')) {
+  try {
+    const decoded = atob(startParam);
+    if (decoded.startsWith('http')) {
+      localStorage.setItem('api_base', decoded.replace(/\/$/, ''));
+      location.reload();
+    }
+  } catch {}
 }
 
-loadDashboard();
+if (!API_BASE) {
+  // Show setup screen
+  document.getElementById('screen-dashboard').innerHTML = `
+    <div class="card" style="margin-top:40px;text-align:center">
+      <div style="font-size:48px;margin-bottom:16px">&#x26A1;</div>
+      <div style="font-size:20px;font-weight:700;margin-bottom:8px">Connect to Bot API</div>
+      <div style="color:var(--hint);font-size:13px;margin-bottom:20px;line-height:1.6">
+        Enter the URL where your bot's API server is running.<br>
+        This is the server running on port 3847.
+      </div>
+      <div class="amount-input-group" style="margin-bottom:12px">
+        <input type="url" id="setupUrl" placeholder="https://your-server:3847" style="flex:1;background:none;color:var(--text);font-size:14px">
+      </div>
+      <button class="trade-btn buy" onclick="
+        const url = document.getElementById('setupUrl').value.trim();
+        if (url && url.startsWith('http')) {
+          localStorage.setItem('api_base', url.replace(/\\/$/, ''));
+          location.reload();
+        }
+      ">Connect</button>
+    </div>
+  `;
+} else {
+  loadDashboard();
+}
 </script>
 </body>
 </html>
