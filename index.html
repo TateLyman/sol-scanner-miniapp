@@ -567,17 +567,18 @@ input { font-family: inherit; outline: none; border: none; }
 // ==========================================
 // INIT
 // ==========================================
-const tg = window.Telegram.WebApp;
-tg.ready();
-tg.expand();
-tg.enableClosingConfirmation();
-tg.setHeaderColor(getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#0f0f0f');
+// Graceful Telegram SDK — works in browser too
+const tg = window.Telegram?.WebApp || {};
+const hasTg = !!window.Telegram?.WebApp;
+try { tg.ready?.(); tg.expand?.(); tg.enableClosingConfirmation?.(); } catch {}
+try { tg.setHeaderColor?.(getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#0f0f0f'); } catch {}
+function haptic(type) { try { tg.HapticFeedback?.impactOccurred?.(type); } catch {} }
+function hapticNotify(type) { try { tg.HapticFeedback?.notificationOccurred?.(type); } catch {} }
 
-// API config — change this to your bot's API URL
-// API discovery: bot writes tunnel URL to this endpoint
+// API discovery
 const TUNNEL_URL_FILE = 'https://raw.githubusercontent.com/TateLyman/sol-scanner-miniapp/main/api-url.txt';
 let API_BASE = localStorage.getItem('api_base') || '';
-const initData = tg.initData;
+const initData = tg.initData || '';
 const user = tg.initDataUnsafe?.user;
 
 // State
@@ -620,8 +621,8 @@ function toast(msg, type = '') {
   el.textContent = msg;
   el.className = `toast show ${type}`;
   setTimeout(() => el.className = 'toast', 3000);
-  if (type === 'success') tg.HapticFeedback.notificationOccurred('success');
-  if (type === 'error') tg.HapticFeedback.notificationOccurred('error');
+  if (type === 'success') hapticNotify('success');
+  if (type === 'error') hapticNotify('error');
 }
 
 // ==========================================
@@ -629,7 +630,7 @@ function toast(msg, type = '') {
 // ==========================================
 document.querySelectorAll('.nav-item').forEach(btn => {
   btn.addEventListener('click', () => {
-    tg.HapticFeedback.impactOccurred('light');
+    haptic('light');
     switchTab(btn.dataset.tab);
   });
 });
@@ -777,14 +778,14 @@ function setTradeMode(mode) {
   document.getElementById('tabSell').className = `trade-tab sell ${mode === 'sell' ? 'active' : ''}`;
   document.getElementById('buyPanel').style.display = mode === 'buy' ? 'block' : 'none';
   document.getElementById('sellPanel').style.display = mode === 'sell' ? 'block' : 'none';
-  tg.HapticFeedback.impactOccurred('light');
+  haptic('light');
 }
 
 function setBuyAmount(amt) {
   document.getElementById('buyAmount').value = amt;
   document.querySelectorAll('#buyPanel .preset-btn').forEach(b => b.classList.remove('active'));
   event.target.classList.add('active');
-  tg.HapticFeedback.impactOccurred('light');
+  haptic('light');
 }
 
 function setSellPct(pct) {
@@ -793,7 +794,7 @@ function setSellPct(pct) {
   document.getElementById('btnSell').textContent = label;
   document.querySelectorAll('#sellPanel .preset-btn').forEach(b => b.classList.remove('active'));
   event.target.classList.add('active');
-  tg.HapticFeedback.impactOccurred('light');
+  haptic('light');
 }
 
 async function executeBuy() {
@@ -990,7 +991,7 @@ async function buyPremium() {
   try {
     const data = await api('/api/premium/invoice', 'POST');
     if (data.url) {
-      tg.openInvoice(data.url, (status) => {
+      tg.openInvoice?.(data.url, (status) => {
         if (status === 'paid') {
           toast('Premium activated!', 'success');
           loadDashboard();
