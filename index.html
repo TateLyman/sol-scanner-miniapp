@@ -597,6 +597,7 @@ async function api(path, method = 'GET', body = null) {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `tma ${initData}`,
+      'Bypass-Tunnel-Reminder': 'true',
     },
   };
   if (body) opts.body = JSON.stringify(body);
