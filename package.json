@@ -1,0 +1,6 @@
+{
+  "name": "sol-scanner-miniapp",
+  "version": "1.0.0",
+  "description": "Telegram Mini App for Sol Scanner Bot",
+  "private": true
+}

@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Sol Scanner</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+/* ==========================================
+   BASE + TELEGRAM THEME
+   ========================================== */
+:root {
+  --bg: var(--tg-theme-bg-color, #0f0f0f);
+  --card: var(--tg-theme-section-bg-color, #1a1a2e);
+  --text: var(--tg-theme-text-color, #e0e0e0);
+  --hint: var(--tg-theme-hint-color, #7a7a8e);
+  --accent: var(--tg-theme-button-color, #6c5ce7);
+  --accent-text: var(--tg-theme-button-text-color, #ffffff);
+  --link: var(--tg-theme-link-color, #6cb4ee);
+  --danger: var(--tg-theme-destructive-text-color, #ff4757);
+  --green: #00d68f;
+  --red: #ff4757;
+  --border: rgba(255,255,255,0.06);
+  --nav-h: 64px;
+  --header-h: 56px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: calc(var(--nav-h) + 16px);
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+button { font-family: inherit; cursor: pointer; border: none; outline: none; }
+input { font-family: inherit; outline: none; border: none; }
+
+/* ==========================================
+   HEADER
+   ========================================== */
+.header {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; height: var(--header-h);
+  background: var(--bg); border-bottom: 1px solid var(--border);
+}
+.header-title { font-size: 18px; font-weight: 700; }
+.header-badge {
+  font-size: 11px; padding: 3px 8px; border-radius: 20px;
+  background: var(--accent); color: var(--accent-text); font-weight: 600;
+}
+.header-badge.premium { background: linear-gradient(135deg, #f5af19, #f12711); }
+
+/* ==========================================
+   CARDS
+   ========================================== */
+.card {
+  background: var(--card); border-radius: 16px;
+  padding: 16px; margin: 8px 16px;
+}
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.card-title { font-size: 13px; color: var(--hint); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+
+/* ==========================================
+   BALANCE CARD
+   ========================================== */
+.balance-amount {
+  font-size: 36px; font-weight: 800;
+  background: linear-gradient(135deg, #fff, #ccc);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  line-height: 1.1;
+}
+.balance-sub { font-size: 14px; color: var(--hint); margin-top: 4px; }
+.balance-change { display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 12px; font-weight: 600; margin-left: 6px; }
+.balance-change.up { background: rgba(0,214,143,0.15); color: var(--green); }
+.balance-change.down { background: rgba(255,71,87,0.15); color: var(--red); }
+
+/* ==========================================
+   QUICK ACTIONS
+   ========================================== */
+.quick-actions {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  margin: 8px 16px;
+}
+.qa-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 8px; border-radius: 14px; background: var(--card);
+  color: var(--text); font-size: 11px; font-weight: 500;
+  transition: transform 0.1s;
+}
+.qa-btn:active { transform: scale(0.95); }
+.qa-icon { font-size: 22px; }
+
+/* ==========================================
+   TOKEN LIST
+   ========================================== */
+.token-row {
+  display: flex; align-items: center; padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.token-row:last-child { border-bottom: none; }
+.token-icon {
+  width: 40px; height: 40px; border-radius: 50%; background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; color: #fff; margin-right: 12px; flex-shrink: 0;
+}
+.token-info { flex: 1; min-width: 0; }
+.token-name { font-size: 15px; font-weight: 600; }
+.token-amount { font-size: 12px; color: var(--hint); margin-top: 2px; }
+.token-right { text-align: right; }
+.token-value { font-size: 15px; font-weight: 600; }
+.token-pnl { font-size: 12px; font-weight: 500; margin-top: 2px; }
+.token-pnl.up { color: var(--green); }
+.token-pnl.down { color: var(--red); }
+
+/* ==========================================
+   TRADE SCREEN
+   ========================================== */
+.search-box {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--card); border-radius: 14px; padding: 12px 16px;
+  margin: 8px 16px;
+}
+.search-box input {
+  flex: 1; background: none; color: var(--text); font-size: 15px;
+}
+.search-box input::placeholder { color: var(--hint); }
+
+.token-detail { padding: 16px; }
+.token-detail-name { font-size: 22px; font-weight: 700; }
+.token-detail-price { font-size: 28px; font-weight: 800; margin-top: 4px; }
+.token-detail-meta { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+.meta-chip {
+  font-size: 12px; padding: 4px 10px; border-radius: 8px;
+  background: rgba(255,255,255,0.06); color: var(--hint);
+}
+.meta-chip.safe { background: rgba(0,214,143,0.1); color: var(--green); }
+.meta-chip.warn { background: rgba(255,165,0,0.1); color: orange; }
+.meta-chip.danger { background: rgba(255,71,87,0.1); color: var(--red); }
+
+.trade-panel { margin: 8px 16px; }
+.trade-tabs {
+  display: flex; border-radius: 12px; overflow: hidden; background: var(--card);
+  margin-bottom: 12px;
+}
+.trade-tab {
+  flex: 1; padding: 10px; text-align: center; font-size: 14px;
+  font-weight: 600; background: none; color: var(--hint);
+  transition: all 0.2s;
+}
+.trade-tab.active { background: var(--accent); color: var(--accent-text); }
+.trade-tab.sell.active { background: var(--red); }
+
+.amount-input-group {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--card); border-radius: 14px; padding: 14px;
+  margin-bottom: 10px;
+}
+.amount-input-group input {
+  flex: 1; background: none; color: var(--text); font-size: 20px;
+  font-weight: 700; width: 0;
+}
+.amount-input-group input::placeholder { color: var(--hint); font-weight: 400; }
+.amount-label { color: var(--hint); font-size: 14px; font-weight: 600; }
+
+.preset-btns {
+  display: flex; gap: 8px; margin-bottom: 14px;
+}
+.preset-btn {
+  flex: 1; padding: 10px; border-radius: 10px; background: var(--card);
+  color: var(--text); font-size: 13px; font-weight: 600; text-align: center;
+  transition: all 0.15s;
+}
+.preset-btn:active, .preset-btn.active {
+  background: var(--accent); color: var(--accent-text);
+}
+
+.trade-btn {
+  width: 100%; padding: 16px; border-radius: 14px; font-size: 16px;
+  font-weight: 700; color: #fff; transition: transform 0.1s;
+}
+.trade-btn:active { transform: scale(0.98); }
+.trade-btn.buy { background: linear-gradient(135deg, var(--green), #00b894); }
+.trade-btn.sell { background: linear-gradient(135deg, var(--red), #ee5a24); }
+.trade-btn:disabled { opacity: 0.5; }
+.trade-info { font-size: 12px; color: var(--hint); text-align: center; margin-top: 8px; }
+
+/* ==========================================
+   DISCOVER
+   ========================================== */
+.discover-section { margin: 8px 16px; }
+.section-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; padding: 0 4px; }
+.trending-row {
+  display: flex; align-items: center; padding: 12px;
+  background: var(--card); border-radius: 14px; margin-bottom: 8px;
+  cursor: pointer; transition: transform 0.1s;
+}
+.trending-row:active { transform: scale(0.98); }
+.trending-rank {
+  width: 28px; height: 28px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; margin-right: 12px;
+  background: rgba(255,255,255,0.05); color: var(--hint);
+}
+.trending-rank.top { background: linear-gradient(135deg, #f5af19, #f12711); color: #fff; }
+.trending-name { flex: 1; font-size: 14px; font-weight: 600; }
+.trending-boosts { font-size: 12px; color: var(--hint); }
+.promoted-badge { font-size: 10px; background: linear-gradient(135deg, #f5af19, #f12711); color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: 600; margin-left: 8px; }
+
+/* ==========================================
+   SETTINGS
+   ========================================== */
+.setting-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 0; border-bottom: 1px solid var(--border);
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-label { font-size: 15px; }
+.setting-value { font-size: 15px; color: var(--accent); font-weight: 600; }
+.setting-input {
+  background: rgba(255,255,255,0.06); border-radius: 8px;
+  padding: 6px 12px; color: var(--text); font-size: 15px;
+  width: 80px; text-align: right; font-weight: 600;
+}
+
+.premium-card {
+  background: linear-gradient(135deg, #1a1a3e, #2d1b69);
+  border: 1px solid rgba(108,92,231,0.3);
+}
+.premium-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.premium-desc { font-size: 13px; color: var(--hint); line-height: 1.5; }
+.premium-btn {
+  width: 100%; padding: 14px; border-radius: 12px; font-size: 15px;
+  font-weight: 700; margin-top: 14px; color: #fff;
+  background: linear-gradient(135deg, #f5af19, #f12711);
+}
+
+.referral-card { text-align: center; }
+.ref-code { font-size: 24px; font-weight: 800; letter-spacing: 2px; color: var(--accent); margin: 12px 0; }
+.ref-stats { display: flex; justify-content: space-around; margin-top: 12px; }
+.ref-stat-num { font-size: 20px; font-weight: 700; }
+.ref-stat-label { font-size: 11px; color: var(--hint); margin-top: 2px; }
+.copy-btn {
+  padding: 10px 24px; border-radius: 10px; background: var(--accent);
+  color: var(--accent-text); font-size: 13px; font-weight: 600; margin-top: 12px;
+}
+
+/* ==========================================
+   BOTTOM NAV
+   ========================================== */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  display: flex; height: var(--nav-h);
+  background: var(--bg); border-top: 1px solid var(--border);
+  z-index: 100; padding-bottom: env(safe-area-inset-bottom);
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px;
+  color: var(--hint); font-size: 10px; font-weight: 500;
+  background: none; transition: color 0.2s;
+}
+.nav-item.active { color: var(--accent); }
+.nav-icon { font-size: 22px; }
+
+/* ==========================================
+   SCREENS
+   ========================================== */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* ==========================================
+   LOADING / EMPTY
+   ========================================== */
+.spinner {
+  width: 32px; height: 32px; border: 3px solid var(--border);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 0.8s linear infinite; margin: 40px auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty { text-align: center; padding: 40px 20px; color: var(--hint); font-size: 14px; }
+
+/* ==========================================
+   TOAST
+   ========================================== */
+.toast {
+  position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+  background: var(--card); color: var(--text); padding: 12px 20px;
+  border-radius: 12px; font-size: 14px; font-weight: 500; z-index: 200;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  opacity: 0; transition: opacity 0.3s; pointer-events: none;
+}
+.toast.show { opacity: 1; }
+.toast.error { border-left: 3px solid var(--red); }
+.toast.success { border-left: 3px solid var(--green); }
+
+/* ==========================================
+   ADDRESS DISPLAY
+   ========================================== */
+.address-row {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.04); border-radius: 10px;
+  padding: 10px 12px; margin-top: 8px; cursor: pointer;
+}
+.address-text { font-family: monospace; font-size: 13px; color: var(--hint); flex: 1; }
+.copy-icon { font-size: 16px; color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-title">Sol Scanner</div>
+  <div class="header-badge" id="headerBadge">1% fee</div>
+</div>
+
+<!-- ==========================================
+     DASHBOARD SCREEN
+     ========================================== -->
+<div class="screen active" id="screen-dashboard">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Portfolio Value</div>
+    </div>
+    <div class="balance-amount" id="totalUsd">$0.00</div>
+    <div class="balance-sub">
+      <span id="solBalance">0.0000</span> SOL
+      <span class="balance-change" id="totalPnlBadge" style="display:none"></span>
+    </div>
+  </div>
+
+  <div class="card" id="depositCard" style="display:none">
+    <div class="card-title" style="margin-bottom:8px">Deposit SOL to start trading</div>
+    <div class="address-row" id="addressRow">
+      <div class="address-text" id="walletAddress">...</div>
+      <div class="copy-icon">&#x2398;</div>
+    </div>
+  </div>
+
+  <div class="quick-actions">
+    <button class="qa-btn" onclick="switchTab('trade')">
+      <span class="qa-icon">&#x26A1;</span> Buy
+    </button>
+    <button class="qa-btn" onclick="switchTab('discover')">
+      <span class="qa-icon">&#x1F525;</span> Trending
+    </button>
+    <button class="qa-btn" onclick="switchTab('trade'); document.getElementById('tradeSearch').focus();">
+      <span class="qa-icon">&#x1F50D;</span> Scan
+    </button>
+    <button class="qa-btn" onclick="switchTab('settings')">
+      <span class="qa-icon">&#x2B50;</span> Premium
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Holdings</div>
+    </div>
+    <div id="holdingsList">
+      <div class="spinner"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================
+     TRADE SCREEN
+     ========================================== -->
+<div class="screen" id="screen-trade">
+  <div class="search-box">
+    <span>&#x1F50D;</span>
+    <input type="text" id="tradeSearch" placeholder="Paste token address or search..." autocomplete="off">
+  </div>
+
+  <div id="tokenDetail" style="display:none">
+    <div class="card">
+      <div class="token-detail">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="token-icon" id="tdIcon">?</div>
+          <div>
+            <div class="token-detail-name" id="tdName">-</div>
+            <div style="font-size:12px;color:var(--hint)" id="tdSymbol">-</div>
+          </div>
+        </div>
+        <div class="token-detail-price" id="tdPrice">$0.00</div>
+        <div class="token-detail-meta" id="tdMeta"></div>
+      </div>
+    </div>
+
+    <div class="trade-panel">
+      <div class="trade-tabs">
+        <button class="trade-tab active" id="tabBuy" onclick="setTradeMode('buy')">Buy</button>
+        <button class="trade-tab sell" id="tabSell" onclick="setTradeMode('sell')">Sell</button>
+      </div>
+
+      <div id="buyPanel">
+        <div class="amount-input-group">
+          <input type="number" id="buyAmount" placeholder="0.0" step="0.1" inputmode="decimal">
+          <div class="amount-label">SOL</div>
+        </div>
+        <div class="preset-btns">
+          <button class="preset-btn" onclick="setBuyAmount(0.1)">0.1</button>
+          <button class="preset-btn" onclick="setBuyAmount(0.5)">0.5</button>
+          <button class="preset-btn" onclick="setBuyAmount(1)">1</button>
+          <button class="preset-btn" onclick="setBuyAmount(5)">5</button>
+        </div>
+        <button class="trade-btn buy" id="btnBuy" onclick="executeBuy()">Buy</button>
+        <div class="trade-info" id="buyFeeInfo"></div>
+      </div>
+
+      <div id="sellPanel" style="display:none">
+        <div class="preset-btns">
+          <button class="preset-btn" onclick="setSellPct(25)">25%</button>
+          <button class="preset-btn" onclick="setSellPct(50)">50%</button>
+          <button class="preset-btn" onclick="setSellPct(75)">75%</button>
+          <button class="preset-btn" onclick="setSellPct(100)">100%</button>
+        </div>
+        <button class="trade-btn sell" id="btnSell" onclick="executeSell()">Sell All</button>
+        <div class="trade-info" id="sellFeeInfo"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tradeEmpty" class="empty">
+    Paste a Solana token address above to start trading
+  </div>
+</div>
+
+<!-- ==========================================
+     PORTFOLIO SCREEN
+     ========================================== -->
+<div class="screen" id="screen-portfolio">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Open Positions</div>
+    </div>
+    <div id="portfolioList">
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Active Orders</div>
+    </div>
+    <div id="ordersList">
+      <div class="spinner"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================
+     DISCOVER SCREEN
+     ========================================== -->
+<div class="screen" id="screen-discover">
+  <div class="discover-section">
+    <div class="section-title">Trending Tokens</div>
+    <div id="trendingList">
+      <div class="spinner"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================
+     SETTINGS SCREEN
+     ========================================== -->
+<div class="screen" id="screen-settings">
+  <div class="card premium-card" id="premiumCard">
+    <div class="premium-title" id="premiumTitle">Go Premium</div>
+    <div class="premium-desc">
+      0.5% trading fees (save 50%) &bull; Unlimited snipes &bull; 40% referral commissions &bull; Free alpha signals
+    </div>
+    <button class="premium-btn" id="premiumBtn" onclick="buyPremium()">Upgrade for 250 Stars</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Trading Settings</div></div>
+    <div class="setting-row">
+      <div class="setting-label">Slippage</div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <input class="setting-input" id="setSlippage" type="number" min="0.5" max="50" step="0.5" value="1">
+        <span class="setting-value">%</span>
+      </div>
+    </div>
+    <div class="setting-row">
+      <div class="setting-label">Quick Buy Amount</div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <input class="setting-input" id="setAutoBuy" type="number" min="0.01" max="100" step="0.1" value="0.1">
+        <span class="setting-value">SOL</span>
+      </div>
+    </div>
+    <div class="setting-row">
+      <div class="setting-label">Auto Take-Profit</div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <input class="setting-input" id="setAutoTP" type="number" min="0" max="10000" step="10" value="0">
+        <span class="setting-value">%</span>
+      </div>
+    </div>
+    <button class="preset-btn" style="width:100%;margin-top:12px" onclick="saveSettings()">Save Settings</button>
+  </div>
+
+  <div class="card referral-card">
+    <div class="card-title">Referral Program</div>
+    <div class="ref-code" id="refCode">...</div>
+    <button class="copy-btn" id="refCopyBtn" onclick="copyRefLink()">Copy Referral Link</button>
+    <div class="ref-stats">
+      <div>
+        <div class="ref-stat-num" id="refCount">0</div>
+        <div class="ref-stat-label">Referrals</div>
+      </div>
+      <div>
+        <div class="ref-stat-num" id="refEarned">0</div>
+        <div class="ref-stat-label">SOL Earned</div>
+      </div>
+      <div>
+        <div class="ref-stat-num" id="refPoints">0</div>
+        <div class="ref-stat-label">Points</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Sniper</div></div>
+    <div class="setting-row">
+      <div class="setting-label">Auto-Snipe New Tokens</div>
+      <button class="preset-btn" id="sniperToggle" onclick="toggleSniper()" style="width:auto;padding:8px 16px">OFF</button>
+    </div>
+    <div class="setting-row">
+      <div class="setting-label">Snipe Amount</div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <input class="setting-input" id="setSnipeAmt" type="number" min="0.01" max="10" step="0.1" value="0.1">
+        <span class="setting-value">SOL</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================
+     BOTTOM NAV
+     ========================================== -->
+<div class="bottom-nav">
+  <button class="nav-item active" data-tab="dashboard">
+    <span class="nav-icon">&#x1F4B0;</span> Home
+  </button>
+  <button class="nav-item" data-tab="trade">
+    <span class="nav-icon">&#x26A1;</span> Trade
+  </button>
+  <button class="nav-item" data-tab="portfolio">
+    <span class="nav-icon">&#x1F4CA;</span> Portfolio
+  </button>
+  <button class="nav-item" data-tab="discover">
+    <span class="nav-icon">&#x1F525;</span> Discover
+  </button>
+  <button class="nav-item" data-tab="settings">
+    <span class="nav-icon">&#x2699;</span> Settings
+  </button>
+</div>
+
+<script>
+// ==========================================
+// INIT
+// ==========================================
+const tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
+tg.enableClosingConfirmation();
+tg.setHeaderColor(getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#0f0f0f');
+
+// API config — change this to your bot's API URL
+const API_BASE = localStorage.getItem('api_base') || '';
+const initData = tg.initData;
+const user = tg.initDataUnsafe?.user;
+
+// State
+let walletData = null;
+let currentMint = null;
+let currentTokenInfo = null;
+let tradeMode = 'buy';
+let sellPct = 100;
+let userSettings = {};
+let sniperState = { active: false };
+
+// ==========================================
+// API
+// ==========================================
+async function api(path, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `tma ${initData}`,
+    },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  try {
+    const res = await fetch(`${API_BASE}${path}`, opts);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  } catch (err) {
+    throw err;
+  }
+}
+
+// ==========================================
+// TOAST
+// ==========================================
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast show ${type}`;
+  setTimeout(() => el.className = 'toast', 3000);
+  if (type === 'success') tg.HapticFeedback.notificationOccurred('success');
+  if (type === 'error') tg.HapticFeedback.notificationOccurred('error');
+}
+
+// ==========================================
+// NAV
+// ==========================================
+document.querySelectorAll('.nav-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    tg.HapticFeedback.impactOccurred('light');
+    switchTab(btn.dataset.tab);
+  });
+});
+
+function switchTab(tab) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById(`screen-${tab}`).classList.add('active');
+  document.querySelector(`.nav-item[data-tab="${tab}"]`).classList.add('active');
+
+  // Lazy load
+  if (tab === 'discover') loadTrending();
+  if (tab === 'portfolio') loadPortfolio();
+  if (tab === 'settings') loadSettings();
+}
+
+// ==========================================
+// DASHBOARD
+// ==========================================
+async function loadDashboard() {
+  try {
+    walletData = await api('/api/wallet');
+    const { sol, solUsd, totalUsd, tokens, address, premium, feePct } = walletData;
+
+    document.getElementById('totalUsd').textContent = `$${totalUsd.toFixed(2)}`;
+    document.getElementById('solBalance').textContent = `${sol.toFixed(4)}`;
+
+    // Header badge
+    const badge = document.getElementById('headerBadge');
+    if (premium) {
+      badge.textContent = 'PREMIUM';
+      badge.className = 'header-badge premium';
+    } else {
+      badge.textContent = `${(feePct * 100).toFixed(1)}% fee`;
+    }
+
+    // Deposit card
+    document.getElementById('walletAddress').textContent = address;
+    document.getElementById('depositCard').style.display = sol < 0.01 ? 'block' : 'none';
+
+    // Holdings
+    const list = document.getElementById('holdingsList');
+    if (!tokens || tokens.length === 0) {
+      list.innerHTML = '<div class="empty">No tokens held. Buy some to get started!</div>';
+      return;
+    }
+
+    list.innerHTML = tokens.map(t => `
+      <div class="token-row" onclick="openTrade('${t.mint}')">
+        <div class="token-icon">${(t.symbol || t.name || '?')[0].toUpperCase()}</div>
+        <div class="token-info">
+          <div class="token-name">${t.symbol || t.name}</div>
+          <div class="token-amount">${formatNum(t.amount)} tokens</div>
+        </div>
+        <div class="token-right">
+          <div class="token-value">$${t.valueUsd.toFixed(2)}</div>
+          <div class="token-pnl ${t.pnlUsd >= 0 ? 'up' : 'down'}">${t.pnlUsd >= 0 ? '+' : ''}$${t.pnlUsd.toFixed(2)} (${t.pnlPct >= 0 ? '+' : ''}${t.pnlPct.toFixed(1)}%)</div>
+        </div>
+      </div>
+    `).join('');
+
+    // Total PnL badge
+    const totalPnl = tokens.reduce((s, t) => s + t.pnlUsd, 0);
+    if (tokens.some(t => t.pnlUsd !== 0)) {
+      const badge = document.getElementById('totalPnlBadge');
+      badge.style.display = 'inline-block';
+      badge.className = `balance-change ${totalPnl >= 0 ? 'up' : 'down'}`;
+      badge.textContent = `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(2)}`;
+    }
+  } catch (err) {
+    document.getElementById('holdingsList').innerHTML = `<div class="empty">${err.message}</div>`;
+  }
+}
+
+// Copy wallet address
+document.getElementById('addressRow')?.addEventListener('click', () => {
+  const addr = document.getElementById('walletAddress').textContent;
+  navigator.clipboard.writeText(addr).then(() => toast('Address copied!', 'success'));
+});
+
+// ==========================================
+// TRADE
+// ==========================================
+let searchTimeout;
+document.getElementById('tradeSearch').addEventListener('input', (e) => {
+  clearTimeout(searchTimeout);
+  const val = e.target.value.trim();
+  if (val.length >= 32) {
+    searchTimeout = setTimeout(() => openTrade(val), 300);
+  } else {
+    document.getElementById('tokenDetail').style.display = 'none';
+    document.getElementById('tradeEmpty').style.display = 'block';
+  }
+});
+
+async function openTrade(mint) {
+  currentMint = mint;
+  switchTab('trade');
+  document.getElementById('tradeSearch').value = mint;
+  document.getElementById('tradeEmpty').style.display = 'none';
+  document.getElementById('tokenDetail').style.display = 'block';
+
+  // Show loading state
+  document.getElementById('tdName').textContent = 'Loading...';
+  document.getElementById('tdPrice').textContent = '';
+  document.getElementById('tdMeta').innerHTML = '';
+
+  try {
+    const [tokenInfo, scanInfo] = await Promise.all([
+      api(`/api/token?mint=${mint}`),
+      api(`/api/scan?mint=${mint}`),
+    ]);
+    currentTokenInfo = tokenInfo;
+
+    document.getElementById('tdIcon').textContent = (tokenInfo.symbol || '?')[0];
+    document.getElementById('tdName').textContent = tokenInfo.name || shortAddr(mint);
+    document.getElementById('tdSymbol').textContent = tokenInfo.symbol || mint;
+    document.getElementById('tdPrice').textContent = tokenInfo.price ? `$${formatPrice(tokenInfo.price)}` : 'No price data';
+
+    // Meta chips
+    const meta = document.getElementById('tdMeta');
+    let chips = '';
+    const scoreClass = scanInfo.score >= 70 ? 'safe' : scanInfo.score >= 40 ? 'warn' : 'danger';
+    chips += `<span class="meta-chip ${scoreClass}">Score: ${scanInfo.score}/100</span>`;
+    chips += `<span class="meta-chip ${scoreClass}">${scanInfo.verdict}</span>`;
+    if (tokenInfo.verified) chips += `<span class="meta-chip safe">Verified</span>`;
+    scanInfo.flags?.forEach(f => {
+      chips += `<span class="meta-chip ${f.type}">${f.text}</span>`;
+    });
+    meta.innerHTML = chips;
+
+    // Fee info
+    const feePct = walletData?.feePct || 0.01;
+    document.getElementById('buyFeeInfo').textContent = `${(feePct * 100).toFixed(1)}% fee via ${walletData?.premium ? 'Premium' : 'Standard'}`;
+    document.getElementById('sellFeeInfo').textContent = document.getElementById('buyFeeInfo').textContent;
+  } catch (err) {
+    document.getElementById('tdName').textContent = 'Error';
+    document.getElementById('tdPrice').textContent = err.message;
+  }
+}
+
+function setTradeMode(mode) {
+  tradeMode = mode;
+  document.getElementById('tabBuy').className = `trade-tab ${mode === 'buy' ? 'active' : ''}`;
+  document.getElementById('tabSell').className = `trade-tab sell ${mode === 'sell' ? 'active' : ''}`;
+  document.getElementById('buyPanel').style.display = mode === 'buy' ? 'block' : 'none';
+  document.getElementById('sellPanel').style.display = mode === 'sell' ? 'block' : 'none';
+  tg.HapticFeedback.impactOccurred('light');
+}
+
+function setBuyAmount(amt) {
+  document.getElementById('buyAmount').value = amt;
+  document.querySelectorAll('#buyPanel .preset-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  tg.HapticFeedback.impactOccurred('light');
+}
+
+function setSellPct(pct) {
+  sellPct = pct;
+  const label = pct === 100 ? 'Sell All' : `Sell ${pct}%`;
+  document.getElementById('btnSell').textContent = label;
+  document.querySelectorAll('#sellPanel .preset-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  tg.HapticFeedback.impactOccurred('light');
+}
+
+async function executeBuy() {
+  if (!currentMint) return;
+  const amount = parseFloat(document.getElementById('buyAmount').value);
+  if (!amount || amount <= 0) return toast('Enter an amount', 'error');
+
+  const btn = document.getElementById('btnBuy');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+
+  try {
+    const result = await api('/api/buy', 'POST', { mint: currentMint, amountSol: amount });
+    toast(`Bought ${result.tokenName}! TX: ${result.txId.slice(0, 8)}...`, 'success');
+    loadDashboard(); // Refresh
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Buy';
+  }
+}
+
+async function executeSell() {
+  if (!currentMint) return;
+  const btn = document.getElementById('btnSell');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+
+  try {
+    const amount = sellPct === 100 ? 'all' : String(sellPct / 100); // TODO: calculate actual amount
+    const result = await api('/api/sell', 'POST', { mint: currentMint, amount: 'all' });
+    const pnlStr = result.pnl >= 0 ? `+${result.pnl.toFixed(4)}` : result.pnl.toFixed(4);
+    toast(`Sold! Received ${result.solReceived.toFixed(4)} SOL (PnL: ${pnlStr})`, 'success');
+    loadDashboard();
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = sellPct === 100 ? 'Sell All' : `Sell ${sellPct}%`;
+  }
+}
+
+// ==========================================
+// PORTFOLIO
+// ==========================================
+async function loadPortfolio() {
+  try {
+    const data = await api('/api/portfolio');
+    const list = document.getElementById('portfolioList');
+
+    if (!data.positions?.length) {
+      list.innerHTML = '<div class="empty">No open positions</div>';
+    } else {
+      list.innerHTML = data.positions.map(p => `
+        <div class="token-row" onclick="openTrade('${p.mint}')">
+          <div class="token-icon">${(p.symbol || p.name || '?')[0].toUpperCase()}</div>
+          <div class="token-info">
+            <div class="token-name">${p.symbol || p.name}</div>
+            <div class="token-amount">${formatNum(p.tokens)} @ ${p.solSpent.toFixed(3)} SOL</div>
+          </div>
+          <div class="token-right">
+            <div class="token-value">$${p.valueUsd.toFixed(2)}</div>
+            <div class="token-pnl ${p.pnlUsd >= 0 ? 'up' : 'down'}">${p.pnlUsd >= 0 ? '+' : ''}$${p.pnlUsd.toFixed(2)} (${p.pnlPct >= 0 ? '+' : ''}${p.pnlPct.toFixed(1)}%)</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Orders
+    const ordersData = await api('/api/orders');
+    const orderList = document.getElementById('ordersList');
+    if (!ordersData.orders?.length) {
+      orderList.innerHTML = '<div class="empty">No active orders</div>';
+    } else {
+      orderList.innerHTML = ordersData.orders.map(o => `
+        <div class="token-row">
+          <div class="token-icon">${o.type === 'stop-loss' ? '&#x1F6D1;' : o.type === 'take-profit' ? '&#x1F3AF;' : '&#x1F4CB;'}</div>
+          <div class="token-info">
+            <div class="token-name">${o.side.toUpperCase()} ${o.type || 'LIMIT'}</div>
+            <div class="token-amount">${shortAddr(o.mint)} @ $${o.triggerPrice}</div>
+          </div>
+          <div class="token-right">
+            <button class="preset-btn" onclick="cancelOrder('${o.id}')" style="padding:6px 12px;font-size:11px;color:var(--red)">Cancel</button>
+          </div>
+        </div>
+      `).join('');
+    }
+  } catch (err) {
+    document.getElementById('portfolioList').innerHTML = `<div class="empty">${err.message}</div>`;
+  }
+}
+
+async function cancelOrder(id) {
+  try {
+    await api(`/api/orders?id=${id}`, 'DELETE');
+    toast('Order cancelled', 'success');
+    loadPortfolio();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+// ==========================================
+// DISCOVER
+// ==========================================
+async function loadTrending() {
+  try {
+    const data = await api('/api/trending');
+    const list = document.getElementById('trendingList');
+
+    let html = '';
+    // Promoted first
+    (data.promoted || []).forEach(p => {
+      html += `
+        <div class="trending-row" onclick="openTrade('${p.mint}')">
+          <div class="trending-rank top">AD</div>
+          <div class="trending-name">${p.name || shortAddr(p.mint)}<span class="promoted-badge">PROMOTED</span></div>
+        </div>`;
+    });
+    // Trending
+    (data.trending || []).forEach((t, i) => {
+      html += `
+        <div class="trending-row" onclick="openTrade('${t.mint}')">
+          <div class="trending-rank ${i < 3 ? 'top' : ''}">${i + 1}</div>
+          <div class="trending-name">${t.name || shortAddr(t.mint)}</div>
+          <div class="trending-boosts">${t.boosts} boosts</div>
+        </div>`;
+    });
+
+    list.innerHTML = html || '<div class="empty">No trending tokens right now</div>';
+  } catch (err) {
+    document.getElementById('trendingList').innerHTML = `<div class="empty">${err.message}</div>`;
+  }
+}
+
+// ==========================================
+// SETTINGS
+// ==========================================
+async function loadSettings() {
+  try {
+    const [settings, premium, referral, sniper] = await Promise.all([
+      api('/api/settings'),
+      api('/api/premium'),
+      api('/api/referral'),
+      api('/api/sniper'),
+    ]);
+
+    userSettings = settings;
+    sniperState = sniper;
+
+    document.getElementById('setSlippage').value = (settings.slippageBps || 100) / 100;
+    document.getElementById('setAutoBuy').value = settings.autoBuyAmount || 0.1;
+    document.getElementById('setAutoTP').value = settings.autoTakeProfit || 0;
+
+    // Premium
+    if (premium.active) {
+      document.getElementById('premiumTitle').textContent = 'Premium Active';
+      document.getElementById('premiumBtn').textContent = `Expires ${new Date(premium.expiresAt).toLocaleDateString()}`;
+      document.getElementById('premiumBtn').onclick = null;
+    }
+
+    // Referral
+    document.getElementById('refCode').textContent = referral.code;
+    document.getElementById('refCount').textContent = referral.tier1Count;
+    document.getElementById('refEarned').textContent = (referral.totalEarned || 0).toFixed(3);
+    document.getElementById('refPoints').textContent = referral.points;
+
+    // Sniper
+    const sniperBtn = document.getElementById('sniperToggle');
+    sniperBtn.textContent = sniper.active ? 'ON' : 'OFF';
+    sniperBtn.style.background = sniper.active ? 'var(--green)' : '';
+    sniperBtn.style.color = sniper.active ? '#fff' : '';
+    document.getElementById('setSnipeAmt').value = sniper.amountSol || 0.1;
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+async function saveSettings() {
+  try {
+    await api('/api/settings', 'POST', {
+      slippageBps: Math.round(parseFloat(document.getElementById('setSlippage').value) * 100),
+      autoBuyAmount: parseFloat(document.getElementById('setAutoBuy').value),
+      autoTakeProfit: parseFloat(document.getElementById('setAutoTP').value),
+    });
+    toast('Settings saved!', 'success');
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+async function buyPremium() {
+  try {
+    const data = await api('/api/premium/invoice', 'POST');
+    if (data.url) {
+      tg.openInvoice(data.url, (status) => {
+        if (status === 'paid') {
+          toast('Premium activated!', 'success');
+          loadDashboard();
+          loadSettings();
+        } else if (status === 'cancelled') {
+          toast('Payment cancelled');
+        } else {
+          toast('Payment failed', 'error');
+        }
+      });
+    }
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+async function toggleSniper() {
+  try {
+    const newState = !sniperState.active;
+    const amt = parseFloat(document.getElementById('setSnipeAmt').value) || 0.1;
+    await api('/api/sniper', 'POST', { active: newState, amountSol: amt });
+    sniperState.active = newState;
+    const btn = document.getElementById('sniperToggle');
+    btn.textContent = newState ? 'ON' : 'OFF';
+    btn.style.background = newState ? 'var(--green)' : '';
+    btn.style.color = newState ? '#fff' : '';
+    toast(`Sniper ${newState ? 'enabled' : 'disabled'}`, 'success');
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+function copyRefLink() {
+  const code = document.getElementById('refCode').textContent;
+  const link = `https://t.me/solscanitbot?start=ref_${code}`;
+  navigator.clipboard.writeText(link).then(() => toast('Referral link copied!', 'success'));
+}
+
+// ==========================================
+// HELPERS
+// ==========================================
+function shortAddr(a) {
+  return a && a.length > 12 ? a.slice(0, 6) + '...' + a.slice(-4) : a;
+}
+
+function formatNum(n) {
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(2) + 'K';
+  return n.toFixed(n < 1 ? 6 : 2);
+}
+
+function formatPrice(p) {
+  if (p >= 1) return p.toFixed(2);
+  if (p >= 0.01) return p.toFixed(4);
+  if (p >= 0.0001) return p.toFixed(6);
+  return p.toExponential(3);
+}
+
+// ==========================================
+// BOOT
+// ==========================================
+if (!API_BASE) {
+  // Show config prompt if no API base set
+  const base = prompt('Enter your bot API URL (e.g. https://your-server:3847)');
+  if (base) {
+    localStorage.setItem('api_base', base.replace(/\/$/, ''));
+    location.reload();
+  }
+}
+
+loadDashboard();
+</script>
+</body>
+</html>
